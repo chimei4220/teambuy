@@ -10,12 +10,29 @@
   :root { --navbar-color:#52433D; --brand-color:#BC9F77; --brand-color-dark:#a3855f; }
   body { background:#f6f7f9; font-family: -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
   .navbar-brand-custom { background:var(--navbar-color) !important; }
+  .btn-submit-order { background:var(--navbar-color); border-color:var(--navbar-color); color:#fff; }
+  .btn-submit-order:hover { background:#3d322d; border-color:#3d322d; color:#fff; }
   .navbar-icon-badge {
     display:inline-flex; align-items:center; justify-content:center;
     width:32px; height:32px; border-radius:8px;
     background:rgba(255,255,255,0.15);
   }
   .navbar-icon-badge i { font-size:1rem; }
+  .navbar-brand-text {
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    max-width: 46vw;
+  }
+  @media (min-width: 576px) {
+    .navbar-brand-text { max-width: none; }
+  }
+  @media (max-width: 575.98px) {
+    .navbar-toggler, #adminLoginBtn, #adminLogoutBtn {
+      width: 38px; height: 38px;
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 0 !important;
+      border-radius: 8px;
+    }
+  }
   .sidebar { min-height: calc(100vh - 56px); }
   .sidebar .nav-link { color:#495057; border-radius:.375rem; }
   .sidebar .nav-link.active { background:#f3ede5; color:var(--brand-color-dark); font-weight:600; }
@@ -36,6 +53,26 @@
   .landing-thumb-placeholder { color:#ced4da; }
   .card-new-batch { background:#f7f0e6; border:1px solid #e6d7c3 !important; }
   .table-grid-light th, .table-grid-light td { border: 1px solid #ececec !important; }
+  .orders-table { table-layout: fixed; width: 100%; }
+  .orders-table th, .orders-table td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .orders-table td.col-items, .orders-table th.col-items { white-space: normal; word-break: break-word; }
+  .orders-table .col-order-id { width: 7%; }
+  .orders-table .col-time { width: 5%; }
+  .orders-table .col-name { width: 4%; }
+  .orders-table .col-dept { width: 5%; }
+  .orders-table .col-items { width: 19%; }
+  .orders-table .col-amount { width: 6%; }
+  .orders-table .col-status { width: 7%; }
+  .orders-table .col-payinfo { width: 5%; }
+  .orders-table .col-batch { width: 9%; }
+  .orders-table .col-store { width: 6%; }
+  .orders-table .col-note { width: 3%; }
+  .orders-table .col-actions { width: 18%; white-space: nowrap; }
+  .badge-note {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:22px; height:22px; border-radius:50%;
+    background:#dc3545; color:#fff; font-size:.7rem; font-weight:600;
+  }
   .notice-box { background:#faf8f5; border:1px solid #ece4d8; border-radius:.5rem; padding:1rem 1.25rem; margin-bottom:1.5rem; }
   .notice-box .bi-info-circle-fill { color: var(--brand-color); }
   .notice-text { white-space: pre-line; line-height: 1.7; color:#5c554e; }
@@ -43,9 +80,12 @@
   .btn-order:hover { background:var(--brand-color-dark); border-color:var(--brand-color-dark); color:#fff; }
   .btn-status { background:#4b6584; border-color:#4b6584; color:#fff; }
   .btn-status:hover { background:#3a5068; border-color:#3a5068; color:#fff; }
+  /* 手機版（<768px）：側邊欄展開時／主內容都要撐滿整個寬度 */
+  .sidebar-col { width: 100%; }
+  .main-col { width: 100%; }
   @media (min-width: 768px) {
-    .sidebar-col { flex: 0 0 170px; max-width: 170px; }
-    .main-col { flex: 1 1 0%; max-width: calc(100% - 170px); }
+    .sidebar-col { flex: 0 0 170px; max-width: 170px; width: 170px; }
+    .main-col { flex: 1 1 0%; max-width: calc(100% - 170px); width: auto; }
   }
 </style>
 </head>
@@ -53,17 +93,20 @@
 
 <!-- Navbar -->
 <nav class="navbar navbar-dark navbar-brand-custom sticky-top shadow-sm">
-  <div class="container-fluid">
-    <button class="navbar-toggler d-md-none me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+  <div class="container-fluid flex-nowrap">
+    <button class="navbar-toggler d-md-none me-2 flex-shrink-0" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
       <span class="navbar-toggler-icon"></span>
     </button>
-    <span class="navbar-brand fw-bold mb-0 d-flex align-items-center" style="cursor:pointer; font-size:1.1rem;" onclick="window.location.reload()"><span class="navbar-icon-badge me-2"><i class="bi bi-bag-heart"></i></span>這團可以部門團購網</span>
-    <div class="d-flex align-items-center gap-2">
+    <span class="navbar-brand fw-bold mb-0 d-flex align-items-center flex-shrink-1 me-2" style="cursor:pointer; font-size:1.1rem; min-width:0;" onclick="window.location.reload()">
+      <span class="navbar-icon-badge me-2 flex-shrink-0"><i class="bi bi-bag-heart"></i></span>
+      <span class="navbar-brand-text">這團可以部門團購網</span>
+    </span>
+    <div class="d-flex align-items-center gap-2 flex-shrink-0">
       <button class="btn btn-sm btn-outline-light" id="adminLoginBtn" data-bs-toggle="modal" data-bs-target="#loginModal">
-        <i class="bi bi-shield-lock me-1"></i>管理員登入
+        <i class="bi bi-shield-lock"></i><span class="d-none d-sm-inline ms-1">管理員登入</span>
       </button>
       <button class="btn btn-sm btn-light d-none" id="adminLogoutBtn" onclick="logout()">
-        <i class="bi bi-box-arrow-right me-1"></i>登出管理員
+        <i class="bi bi-box-arrow-right"></i><span class="d-none d-sm-inline ms-1">登出管理員</span>
       </button>
     </div>
   </div>
@@ -156,15 +199,15 @@
                     <input type="text" class="form-control form-control-sm" id="fDept" required>
                   </div>
                   <div class="mb-2">
-                    <label class="form-label small fw-semibold">聯絡方式（分機）</label>
-                    <input type="text" class="form-control form-control-sm" id="fContact">
+                    <label class="form-label small fw-semibold">聯絡方式（分機） <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" id="fContact" required>
                   </div>
                   <div class="mb-3">
                     <label class="form-label small fw-semibold">備註</label>
                     <textarea class="form-control form-control-sm" id="fNote" rows="2"></textarea>
                   </div>
-                  <button type="submit" class="btn btn-primary w-100" id="submitBtn">
-                    <i class="bi bi-send-check me-1"></i>送出訂單
+                  <button type="submit" class="btn btn-submit-order w-100" id="submitBtn">
+                    送出訂單
                   </button>
                 </form>
               </div>
@@ -287,11 +330,11 @@
         <div class="card border-0 shadow-sm">
           <div class="card-body">
             <div class="table-responsive">
-              <table class="table table-hover table-sm align-middle table-grid-light">
+              <table class="table table-hover table-sm align-middle table-grid-light orders-table">
                 <thead class="table-light">
                   <tr>
-                    <th class="text-center">訂單編號</th><th class="text-center">時間</th><th class="text-center">姓名</th><th class="text-center">部門</th><th class="text-center">品項明細</th>
-                    <th class="text-center">金額</th><th class="text-center">付款狀態</th><th class="text-center">付款資訊</th><th class="text-center">交貨狀態</th><th class="text-center">梯次</th><th class="text-center">店家</th><th class="text-center">備註</th><th class="text-center">操作</th>
+                    <th class="text-center col-order-id">訂單編號</th><th class="text-center col-time">時間</th><th class="text-center col-name">姓名</th><th class="text-center col-dept">部門</th><th class="text-center col-items">品項明細</th>
+                    <th class="text-center col-amount">金額</th><th class="text-center col-status">付款狀態</th><th class="text-center col-payinfo">付款資訊</th><th class="text-center col-status">交貨狀態</th><th class="text-center col-batch">梯次</th><th class="text-center col-store">店家</th><th class="text-center col-note">備註</th><th class="text-center col-actions">操作</th>
                   </tr>
                 </thead>
                 <tbody id="ordersTbody">
@@ -823,7 +866,7 @@ document.getElementById('orderForm').addEventListener('submit', async (e) => {
     toast('連線錯誤', String(err));
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="bi bi-send-check me-1"></i>送出訂單';
+    btn.innerHTML = '送出訂單';
   }
 });
 
@@ -907,7 +950,7 @@ function renderPublicOrders() {
 }
 
 async function reportPaymentFor(orderId) {
-  const info = prompt('請輸入付款資訊（例如：轉帳後五碼 12345）');
+  const info = prompt('請輸入付款資訊（例如：轉帳後四碼 1234）');
   if (!info || !info.trim()) return;
   try {
     const res = await apiPost({ action: 'reportPayment', orderId, paymentInfo: info.trim() });
@@ -972,15 +1015,14 @@ async function loadOrders() {
     return;
   }
   orders = res.data;
-  renderStats();
   renderOrders();
 }
 
-function renderStats() {
-  const total = orders.length;
-  const totalAmount = orders.reduce((s, o) => s + Number(o['總金額'] || 0), 0);
-  const unpaid = orders.filter(o => o['付款狀態'] === '未付款').length;
-  const pending = orders.filter(o => o['付款狀態'] === '已回報，待確認').length;
+function renderStats(list) {
+  const total = list.length;
+  const totalAmount = list.reduce((s, o) => s + Number(o['總金額'] || 0), 0);
+  const unpaid = list.filter(o => o['付款狀態'] === '未付款').length;
+  const pending = list.filter(o => o['付款狀態'] === '已回報，待確認').length;
 
   const cards = [
     { label: '總訂單數', value: total, icon: 'bi-receipt', color: 'primary' },
@@ -1068,6 +1110,7 @@ function renderOrders() {
     return true;
   });
 
+  renderStats(list);
   renderItemSummary_(list);
 
   const tbody = document.getElementById('ordersTbody');
@@ -1078,23 +1121,23 @@ function renderOrders() {
 
   tbody.innerHTML = list.slice().reverse().map(o => `
     <tr>
-      <td class="small text-center">${escapeHtml(o['訂單編號'])}</td>
-      <td class="small text-nowrap text-center">${formatDate(o['時間'])}</td>
-      <td class="text-center">${escapeHtml(o['姓名'])}</td>
-      <td class="text-center">${escapeHtml(o['部門'])}</td>
-      <td class="small">${escapeHtml(o['品項明細'])}</td>
-      <td class="text-end fw-semibold">${fmtMoney(o['總金額'])}</td>
-      <td class="text-center">${payBadge(o['付款狀態'])}</td>
-      <td class="small text-center">${escapeHtml(o['付款資訊'] || '')}</td>
-      <td class="text-center">${shipBadge(o['出貨狀態'])}</td>
-      <td class="small text-center">${escapeHtml(o['梯次'] || '')}</td>
-      <td class="small text-center">${escapeHtml(o['店家名稱'] || '')}</td>
-      <td class="small">${escapeHtml(o['備註'] || '')}</td>
-      <td class="text-nowrap text-center">
-        ${o['付款狀態'] !== '已確認' ? `<button class="btn btn-sm btn-success" onclick="updateStatus('${o['訂單編號']}','付款狀態','已確認')">確認付款</button>` : ''}
-        ${o['出貨狀態'] !== '已出貨' ? `<button class="btn btn-sm btn-outline-primary" onclick="updateStatus('${o['訂單編號']}','出貨狀態','已出貨')">標記交貨</button>` : ''}
-        <button class="btn btn-sm btn-outline-secondary" onclick="startEditOrder('${o['訂單編號']}')">修改訂單</button>
-        <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('${o['訂單編號']}')">刪除訂單</button>
+      <td class="small text-center col-order-id" title="${escapeHtml(o['訂單編號'])}">${escapeHtml(o['訂單編號'])}</td>
+      <td class="small text-center col-time" title="${escapeHtml(formatDate(o['時間']))}">${formatDate(o['時間'])}</td>
+      <td class="text-center col-name" title="${escapeHtml(o['姓名'])}">${escapeHtml(o['姓名'])}</td>
+      <td class="text-center col-dept" title="${escapeHtml(o['部門'])}">${escapeHtml(o['部門'])}</td>
+      <td class="small col-items">${escapeHtml(o['品項明細'])}</td>
+      <td class="text-end fw-semibold col-amount">${fmtMoney(o['總金額'])}</td>
+      <td class="text-center col-status">${payBadge(o['付款狀態'])}</td>
+      <td class="small text-center col-payinfo" title="${escapeHtml(o['付款資訊'] || '')}">${escapeHtml(o['付款資訊'] || '')}</td>
+      <td class="text-center col-status">${shipBadge(o['出貨狀態'])}</td>
+      <td class="small text-center col-batch" title="${escapeHtml(o['梯次'] || '')}">${escapeHtml(o['梯次'] || '')}</td>
+      <td class="small text-center col-store" title="${escapeHtml(o['店家名稱'] || '')}">${escapeHtml(o['店家名稱'] || '')}</td>
+      <td class="text-center col-note" title="${escapeHtml(o['備註'] || '')}">${o['備註'] ? '<span class="badge-note">備</span>' : ''}</td>
+      <td class="text-center col-actions">
+        ${o['付款狀態'] !== '已確認' ? `<button class="btn btn-sm btn-success" onclick="updateStatus('${o['訂單編號']}','付款狀態','已確認')">確認</button>` : ''}
+        ${o['出貨狀態'] !== '已出貨' ? `<button class="btn btn-sm btn-outline-primary" onclick="updateStatus('${o['訂單編號']}','出貨狀態','已出貨')">交貨</button>` : ''}
+        <button class="btn btn-sm btn-outline-secondary" onclick="startEditOrder('${o['訂單編號']}')">修改</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('${o['訂單編號']}')">刪除</button>
       </td>
     </tr>`).join('');
 }
