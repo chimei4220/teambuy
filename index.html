@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部門團購</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+  :root { --navbar-color:#52433D; --brand-color:#BC9F77; --brand-color-dark:#a3855f; }
+  body { background:#f6f7f9; font-family: -apple-system, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif; }
+  .navbar-brand-custom { background:var(--navbar-color) !important; }
+  .navbar-icon-badge {
+    display:inline-flex; align-items:center; justify-content:center;
+    width:32px; height:32px; border-radius:8px;
+    background:rgba(255,255,255,0.15);
+  }
+  .navbar-icon-badge i { font-size:1rem; }
+  .sidebar { min-height: calc(100vh - 56px); }
+  .sidebar .nav-link { color:#495057; border-radius:.375rem; }
+  .sidebar .nav-link.active { background:#f3ede5; color:var(--brand-color-dark); font-weight:600; }
+  .sidebar .nav-link:hover { background:#f1f3f5; }
+  .sidebar .nav-section-label { font-size:.72rem; letter-spacing:.06em; color:#adb5bd; text-transform:uppercase; padding: .75rem 1rem .25rem; }
+  .page-section { display:none; }
+  .page-section.active { display:block; }
+  .product-card { transition: box-shadow .15s ease; }
+  .product-card:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.08) !important; }
+  .product-img-wrap { width:100%; height:210px; overflow:hidden; background:#fff; display:flex; align-items:center; justify-content:center; }
+  .product-img { width:100%; height:100%; object-fit:contain; display:block; }
+  .product-img-placeholder { color:#ced4da; background:#f1f3f5 !important; }
+  .product-card .card-body { background:#f1f3f5; border-radius: 0 0 .375rem .375rem; }
+  .qty-input { width: 70px; }
+  .sticky-cart { position: sticky; top: 1rem; }
+  .landing-thumb-wrap { width:100%; height:170px; overflow:hidden; background:#f1f3f5; display:flex; align-items:center; justify-content:center; }
+  .landing-thumb { width:100%; height:100%; object-fit:cover; display:block; }
+  .landing-thumb-placeholder { color:#ced4da; }
+  .card-new-batch { background:#f7f0e6; border:1px solid #e6d7c3 !important; }
+  .table-grid-light th, .table-grid-light td { border: 1px solid #ececec !important; }
+  .notice-box { background:#faf8f5; border:1px solid #ece4d8; border-radius:.5rem; padding:1rem 1.25rem; margin-bottom:1.5rem; }
+  .notice-box .bi-info-circle-fill { color: var(--brand-color); }
+  .notice-text { white-space: pre-line; line-height: 1.7; color:#5c554e; }
+  .btn-order { background:var(--brand-color); border-color:var(--brand-color); color:#fff; }
+  .btn-order:hover { background:var(--brand-color-dark); border-color:var(--brand-color-dark); color:#fff; }
+  .btn-status { background:#4b6584; border-color:#4b6584; color:#fff; }
+  .btn-status:hover { background:#3a5068; border-color:#3a5068; color:#fff; }
+  @media (min-width: 768px) {
+    .sidebar-col { flex: 0 0 170px; max-width: 170px; }
+    .main-col { flex: 1 1 0%; max-width: calc(100% - 170px); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark navbar-brand-custom sticky-top shadow-sm">
+  <div class="container-fluid">
+    <button class="navbar-toggler d-md-none me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <span class="navbar-brand fw-bold mb-0 d-flex align-items-center" style="cursor:pointer;" onclick="window.location.reload()"><span class="navbar-icon-badge me-2"><i class="bi bi-bag-heart"></i></span>這團可以</span>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-sm btn-outline-light" id="adminLoginBtn" data-bs-toggle="modal" data-bs-target="#loginModal">
+        <i class="bi bi-shield-lock me-1"></i>管理員登入
+      </button>
+      <button class="btn btn-sm btn-light d-none" id="adminLogoutBtn" onclick="logout()">
+        <i class="bi bi-box-arrow-right me-1"></i>登出管理員
+      </button>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <nav class="sidebar-col d-md-block bg-white sidebar collapse shadow-sm" id="sidebarMenu">
+      <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+          <li class="nav-item">
+            <a class="nav-link active" href="#" onclick="switchPage('landing');return false;">
+              <i class="bi bi-megaphone me-2"></i>目前開團中
+            </a>
+          </li>
+        </ul>
+
+        <div class="nav-section-label d-none" id="adminSectionLabel">管理員專區</div>
+        <ul class="nav flex-column" id="adminNavItems">
+          <li class="nav-item d-none admin-nav">
+            <a class="nav-link" href="#" onclick="switchPage('orders');return false;">
+              <i class="bi bi-receipt me-2"></i>訂單管理
+            </a>
+          </li>
+          <li class="nav-item d-none admin-nav">
+            <a class="nav-link" href="#" onclick="switchPage('products');return false;">
+              <i class="bi bi-box-seam me-2"></i>商品管理
+            </a>
+          </li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main-col px-md-4 py-4">
+
+      <div class="notice-box" id="paymentInfoAlert" style="display:none;">
+        <div class="d-flex align-items-start">
+          <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+          <div class="flex-grow-1">
+            <div class="fw-semibold mb-1">訂購注意事項</div>
+            <div id="paymentInfoText" class="small notice-text"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ 頁面：目前開團中（首頁） ============ -->
+      <section class="page-section active" data-page="landing">
+        <h5 class="fw-bold mb-3">目前開團中</h5>
+        <div id="roundsList" class="row g-3">
+          <div class="col-12 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>載入中...</div>
+        </div>
+      </section>
+
+      <!-- ============ 頁面：商品/下單 ============ -->
+      <section class="page-section" data-page="shop">
+        <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="switchPage('landing')">
+          <i class="bi bi-arrow-left me-1"></i>返回
+        </button>
+        <div class="mb-3">
+          <h5 class="fw-bold mb-1" id="shopTitle">商品清單</h5>
+          <div class="text-muted small" id="shopDeadline"></div>
+        </div>
+        <div class="row g-4">
+          <div class="col-lg-9">
+            <div id="productList" class="row g-3">
+              <div class="col-12 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>商品載入中...</div>
+            </div>
+          </div>
+          <div class="col-lg-3">
+            <div class="card border-0 shadow-sm sticky-cart">
+              <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-cart3 me-1"></i>已選品項</h6>
+                <div id="cartItems" class="mb-2">
+                  <div class="text-muted small">尚未選購商品</div>
+                </div>
+                <hr>
+                <div class="d-flex justify-content-between fw-bold mb-3">
+                  <span>總計</span>
+                  <span id="cartTotal">NT$ 0</span>
+                </div>
+                <form id="orderForm">
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold">姓名(全名) <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" id="fName" required>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold">部門(中文) <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" id="fDept" required>
+                  </div>
+                  <div class="mb-2">
+                    <label class="form-label small fw-semibold">聯絡方式（分機）</label>
+                    <input type="text" class="form-control form-control-sm" id="fContact">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold">備註</label>
+                    <textarea class="form-control form-control-sm" id="fNote" rows="2"></textarea>
+                  </div>
+                  <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+                    <i class="bi bi-send-check me-1"></i>送出訂單
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 頁面：查看訂購狀態 ============ -->
+      <section class="page-section" data-page="status">
+        <button type="button" class="btn btn-sm btn-outline-secondary mb-3" onclick="switchPage('landing')">
+          <i class="bi bi-arrow-left me-1"></i>返回
+        </button>
+        <h5 class="fw-bold mb-3"><i class="bi bi-search me-1"></i>查看訂購狀態</h5>
+
+        <div id="statusFilterHint" class="alert alert-light border py-2 px-3 small d-none">
+          目前只顯示「<span id="statusFilterTitle" class="fw-semibold"></span>」的訂單
+        </div>
+
+        <div class="card mb-3 border-0 shadow-sm">
+          <div class="card-body">
+            <label class="form-label small">關鍵字搜尋（訂單編號/部門）</label>
+            <input type="text" class="form-control form-control-sm" id="statusSearchKeyword" placeholder="輸入訂單編號或部門搜尋" oninput="renderPublicOrders()">
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle table-grid-light">
+                <thead class="table-light">
+                  <tr>
+                    <th class="text-center">訂單編號</th><th class="text-center">時間</th><th class="text-center">姓名</th><th class="text-center">部門</th><th class="text-center">品項明細</th>
+                    <th class="text-center">金額</th><th class="text-center">付款狀態</th><th class="text-center">交貨狀態</th><th class="text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="publicOrdersTbody">
+                  <tr><td colspan="9" class="text-center text-muted py-3">載入中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+          </div>
+        </div>
+      </section>
+      </section>
+
+      <!-- ============ 頁面：訂單管理（管理員） ============ -->
+      <section class="page-section" data-page="orders">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="fw-bold mb-0">訂單管理</h4>
+        </div>
+
+        <div class="row g-3 mb-3" id="statsRow"></div>
+
+        <div class="card mb-3 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="fw-bold mb-0"><i class="bi bi-clipboard-data me-1"></i>商品訂購彙總（依目前篩選結果統計）</h6>
+              <span class="small text-muted">結單前可以用這裡確認每樣商品要訂幾份</span>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-grid-light mb-0">
+                <thead class="table-light">
+                  <tr><th class="text-center">品項</th><th class="text-center">總數量</th></tr>
+                </thead>
+                <tbody id="itemSummaryTbody">
+                  <tr><td colspan="2" class="text-center text-muted py-2">尚無資料</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-3 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label small">關鍵字搜尋（姓名/部門/訂單編號）</label>
+                <input type="text" class="form-control form-control-sm" id="searchKeyword" oninput="renderOrders()">
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">付款狀態</label>
+                <select class="form-select form-select-sm" id="filterPayStatus" onchange="renderOrders()">
+                  <option value="">全部</option>
+                  <option>未付款</option>
+                  <option>已回報，待確認</option>
+                  <option>已確認</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small">交貨狀態</label>
+                <select class="form-select form-select-sm" id="filterShipStatus" onchange="renderOrders()">
+                  <option value="">全部</option>
+                  <option>未出貨</option>
+                  <option>已出貨</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">梯次</label>
+                <select class="form-select form-select-sm" id="filterOrderBatch" onchange="renderOrders()">
+                  <option value="">全部梯次</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">店家</label>
+                <select class="form-select form-select-sm" id="filterOrderStore" onchange="renderOrders()">
+                  <option value="">全部店家</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <button class="btn btn-outline-secondary btn-sm w-100" onclick="exportCsv()">
+                  <i class="bi bi-download me-1"></i>匯出 CSV
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle table-grid-light">
+                <thead class="table-light">
+                  <tr>
+                    <th class="text-center">訂單編號</th><th class="text-center">時間</th><th class="text-center">姓名</th><th class="text-center">部門</th><th class="text-center">品項明細</th>
+                    <th class="text-center">金額</th><th class="text-center">付款狀態</th><th class="text-center">付款資訊</th><th class="text-center">交貨狀態</th><th class="text-center">梯次</th><th class="text-center">店家</th><th class="text-center">備註</th><th class="text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="ordersTbody">
+                  <tr><td colspan="13" class="text-center text-muted py-3">載入中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 頁面：商品管理（管理員） ============ -->
+      <section class="page-section" data-page="products">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="fw-bold mb-0">商品管理</h4>
+          <span class="badge bg-secondary">進行中場次：<span id="activeRoundCountLabel">-</span></span>
+        </div>
+
+        <div class="row g-3 mb-3">
+          <!-- 店家管理 -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <h6 class="fw-bold mb-3"><i class="bi bi-shop me-1"></i>店家管理</h6>
+                <div class="table-responsive mb-3">
+                  <table class="table table-sm align-middle">
+                    <thead class="table-light">
+                      <tr><th>店家編號</th><th>店家名稱</th><th>縮圖網址</th><th>備註</th></tr>
+                    </thead>
+                    <tbody id="storesTbody">
+                      <tr><td colspan="4" class="text-center text-muted py-3">載入中...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <form id="addStoreForm" class="row g-2">
+                  <div class="col-12 col-xl-3">
+                    <input type="text" class="form-control form-control-sm" id="nsName" placeholder="新店家名稱" required>
+                  </div>
+                  <div class="col-12 col-xl-4">
+                    <input type="text" class="form-control form-control-sm" id="nsImage" placeholder="縮圖網址（選填）">
+                  </div>
+                  <div class="col-12 col-xl-3">
+                    <input type="text" class="form-control form-control-sm" id="nsNote" placeholder="備註（選填）">
+                  </div>
+                  <div class="col-12 col-xl-2">
+                    <button type="submit" class="btn btn-outline-primary btn-sm w-100">新增店家</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- 開新團 -->
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100 card-new-batch">
+              <div class="card-body">
+                <h6 class="fw-bold mb-1"><i class="bi bi-flag me-1"></i>開新團</h6>
+                <p class="small text-muted mb-3">選擇店家後，會直接沿用該店家已建立的商品，不用重新輸入；梯次會用建立時間自動產生，不用自己記編號。</p>
+                <form id="newBatchForm" class="d-flex flex-column gap-2">
+                  <div class="row g-2 align-items-center">
+                    <label class="col-auto col-form-label col-form-label-sm fw-semibold" style="width:130px;" for="nbStoreSelect">選擇店家：</label>
+                    <div class="col">
+                      <select class="form-select form-select-sm" id="nbStoreSelect" required>
+                        <option value="">選擇店家</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-auto col-form-label col-form-label-sm fw-semibold" style="width:130px;" for="nbTitle">團購標題：</label>
+                    <div class="col">
+                      <input type="text" class="form-control form-control-sm" id="nbTitle" placeholder="選填，預設店家名稱">
+                    </div>
+                  </div>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-auto col-form-label col-form-label-sm fw-semibold" style="width:130px;" for="nbOrgUnit">開團單位：</label>
+                    <div class="col">
+                      <input type="text" class="form-control form-control-sm" id="nbOrgUnit" placeholder="選填，例如採購部">
+                    </div>
+                  </div>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-auto col-form-label col-form-label-sm fw-semibold" style="width:130px;" for="nbInviteUnit">邀請單位：</label>
+                    <div class="col">
+                      <input type="text" class="form-control form-control-sm" id="nbInviteUnit" placeholder="選填，例如全公司/業務部">
+                    </div>
+                  </div>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-auto col-form-label col-form-label-sm fw-semibold" style="width:130px;" for="nbDeadline">訂購截止時間：</label>
+                    <div class="col">
+                      <input type="datetime-local" class="form-control form-control-sm" id="nbDeadline" required>
+                    </div>
+                  </div>
+                  <div class="row g-2 align-items-center">
+                    <label class="col-auto col-form-label col-form-label-sm fw-semibold" style="width:130px;" for="nbPaymentDeadline">付款截止時間：</label>
+                    <div class="col">
+                      <input type="datetime-local" class="form-control form-control-sm" id="nbPaymentDeadline">
+                    </div>
+                  </div>
+                  <div>
+                    <button type="submit" class="btn btn-order btn-sm">開團</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 場次管理 -->
+        <div class="card mb-3 border-0 shadow-sm">
+          <div class="card-body">
+            <h6 class="fw-bold mb-3"><i class="bi bi-calendar3 me-1"></i>場次管理</h6>
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle">
+                <thead class="table-light">
+                  <tr>
+                    <th>梯次</th><th>店家</th><th>團購標題</th><th>開團單位</th><th>邀請單位</th>
+                    <th>訂購截止</th><th>付款截止</th><th>狀態</th><th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="roundsTbody">
+                  <tr><td colspan="9" class="text-center text-muted py-3">載入中...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- 商品目錄管理 -->
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+              <h6 class="fw-bold mb-0"><i class="bi bi-box-seam me-1"></i>商品目錄</h6>
+              <select class="form-select form-select-sm" id="manageStoreSelect" style="width:220px;">
+                <option value="">選擇要管理的店家</option>
+              </select>
+            </div>
+
+            <form id="addProductForm" class="row g-2 mb-3">
+              <div class="col-md-3">
+                <input type="text" class="form-control form-control-sm" id="npName" placeholder="品名" required>
+              </div>
+              <div class="col-md-2">
+                <input type="text" class="form-control form-control-sm" id="npSpec" placeholder="規格">
+              </div>
+              <div class="col-md-2">
+                <input type="number" class="form-control form-control-sm" id="npPrice" placeholder="單價" required>
+              </div>
+              <div class="col-md-3">
+                <input type="text" class="form-control form-control-sm" id="npImage" placeholder="圖片網址（選填）">
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">新增商品</button>
+              </div>
+            </form>
+
+            <div class="table-responsive">
+              <table class="table table-hover table-sm align-middle">
+                <thead class="table-light">
+                  <tr><th>編號</th><th>品名</th><th>規格</th><th class="text-end">單價</th><th>圖片網址</th><th>狀態</th></tr>
+                </thead>
+                <tbody id="productsTbody">
+                  <tr><td colspan="6" class="text-center text-muted py-3">請先選擇上方的店家</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- 管理員登入 Modal -->
+<div class="modal fade" id="loginModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-shield-lock me-2"></i>管理員登入</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="loginForm">
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">管理密碼</label>
+            <input type="password" class="form-control" id="loginPassword" required>
+          </div>
+          <div id="loginError" class="alert alert-danger py-2 small" style="display:none;"></div>
+          <button type="submit" class="btn btn-primary w-100">登入</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 訂單成功 Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="bi bi-check-circle me-2"></i>訂單已送出</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p>您的訂單編號：</p>
+        <div class="fs-5 fw-bold text-primary mb-2" id="successOrderId"></div>
+        <p class="mb-1">總金額：<span class="fw-bold" id="successTotal"></span></p>
+        <p class="small text-muted">請記下訂單編號，完成轉帳後可至「查看訂購狀態」頁面回報付款。</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">我知道了</button>
+        <button type="button" class="btn btn-status" data-bs-dismiss="modal" onclick="goToStatusFromSuccess()">
+          <i class="bi bi-search me-1"></i>前往回報付款
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 修改訂單 Modal（管理員） -->
+<div class="modal fade" id="editOrderModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-pencil-square me-2"></i>修改訂單</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="eoOrderId">
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">姓名</label>
+            <input type="text" class="form-control form-control-sm" id="eoName">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">部門</label>
+            <input type="text" class="form-control form-control-sm" id="eoDept">
+          </div>
+        </div>
+        <label class="form-label small fw-semibold">品項與數量</label>
+        <div id="eoItemsList" class="border rounded p-2 mb-2" style="max-height:280px; overflow-y:auto;"></div>
+        <div class="d-flex justify-content-between fw-bold mb-3">
+          <span>總金額</span>
+          <span id="eoTotalPreview">NT$ 0</span>
+        </div>
+        <label class="form-label small fw-semibold">備註</label>
+        <textarea class="form-control form-control-sm" id="eoNote" rows="2"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-primary" onclick="saveEditOrder()">儲存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="liveToast" class="toast" role="alert">
+    <div class="toast-header">
+      <strong class="me-auto" id="toastTitle">通知</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="toastBody"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// =====================================================================
+// 請將這裡換成你自己部署的 Google Apps Script 網頁應用程式網址
+// =====================================================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbyLk9bqhgoYDy7-0fGQLvU9ohPqmWplNmRsGnlEaKW8j_H9YgJC-8K4VoMkHVQPu07Kew/exec';
+
+let products = [];
+let cart = {}; // { code: qty }
+let activeRounds = [];
+let selectedBatch = '';
+let hasPaymentInfo = false;
+let token = sessionStorage.getItem('gb_admin_token') || '';
+let orders = [];
+let productsData = [];
+let storesData = [];
+let roundsData = [];
+
+// ---------- 共用工具 ----------
+function toast(title, body) {
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastBody').textContent = body;
+  new bootstrap.Toast(document.getElementById('liveToast')).show();
+}
+
+async function apiGet(action, params = {}) {
+  const url = new URL(API_URL);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  url.searchParams.set('_ts', Date.now()); // 避免瀏覽器快取住舊的回應
+  const res = await fetch(url, { cache: 'no-store' });
+  return res.json();
+}
+
+async function apiPost(payload) {
+  // 用 text/plain 避免觸發瀏覽器的 CORS 預檢請求（Apps Script 不支援 OPTIONS）
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+function fmtMoney(n) { return 'NT$ ' + Number(n).toLocaleString(); }
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+function formatDeadline_(v) {
+  if (!v) return '';
+  // "2026-08-14T18:00" -> "2026-08-14 18:00"（24 小時制）
+  return String(v).replace('T', ' ');
+}
+
+// ---------- 頁面切換（側邊列） ----------
+function switchPage(page) {
+  document.querySelectorAll('.page-section').forEach(el => {
+    el.classList.toggle('active', el.dataset.page === page);
+  });
+  document.querySelectorAll('.sidebar .nav-link').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${page}'`));
+  });
+  // 手機版：切換頁面後自動收合側邊選單
+  const sidebar = document.getElementById('sidebarMenu');
+  if (sidebar.classList.contains('show')) {
+    bootstrap.Collapse.getOrCreateInstance(sidebar).hide();
+  }
+  // 管理頁面（訂單管理/商品管理）不顯示訂購注意事項卡片
+  const adminPages = ['orders', 'products'];
+  document.getElementById('paymentInfoAlert').style.display =
+    (hasPaymentInfo && !adminPages.includes(page)) ? 'block' : 'none';
+
+  if (page === 'orders') loadOrders();
+  if (page === 'products') { loadProducts(); loadStores(); loadRounds(); }
+  if (page === 'landing') loadActiveRounds();
+  if (page === 'status') loadPublicOrders();
+}
+
+// ---------- 團購設定 / 商品（公開） ----------
+// ---------- 全站設定（付款資訊）----------
+async function loadConfig() {
+  try {
+    const res = await apiGet('getConfig');
+    if (res.ok && res.data.paymentInfo) {
+      document.getElementById('paymentInfoText').textContent = res.data.paymentInfo;
+      hasPaymentInfo = true;
+      const currentPage = document.querySelector('.page-section.active')?.dataset.page;
+      const adminPages = ['orders', 'products'];
+      document.getElementById('paymentInfoAlert').style.display =
+        (!adminPages.includes(currentPage)) ? 'block' : 'none';
+    }
+  } catch (err) { console.error(err); }
+}
+
+// ---------- 首頁：列出所有進行中的場次 ----------
+async function loadActiveRounds() {
+  const listEl = document.getElementById('roundsList');
+  try {
+    const res = await apiGet('getActiveRounds');
+    if (!res.ok) {
+      listEl.innerHTML = `<div class="col-12"><div class="alert alert-danger">載入失敗：${res.error}</div></div>`;
+      return;
+    }
+    activeRounds = res.data;
+    if (activeRounds.length === 0) {
+      listEl.innerHTML = `<div class="col-12 text-muted">目前沒有進行中的團購，請洽管理員。</div>`;
+      return;
+    }
+    listEl.innerHTML = activeRounds.map(r => `
+      <div class="col-sm-8 col-md-5 col-lg-3">
+        <div class="card border-0 shadow-sm overflow-hidden h-100">
+          <div class="landing-thumb-wrap">
+            ${r.shopImage
+              ? `<img src="${r.shopImage}" class="landing-thumb" alt="${escapeHtml(r.storeName)}">`
+              : `<div class="landing-thumb-placeholder"><i class="bi bi-shop fs-1"></i></div>`}
+          </div>
+          <div class="card-body p-3 d-flex flex-column">
+            <h5 class="fw-bold mb-2">${escapeHtml(r.title || r.storeName)}</h5>
+            ${r.orgUnit ? `<div class="small text-muted mb-1">開團單位：${escapeHtml(r.orgUnit)}</div>` : ''}
+            ${r.inviteUnit ? `<div class="small text-muted mb-1">邀請單位：${escapeHtml(r.inviteUnit)}</div>` : ''}
+            <div class="small text-muted mb-1">
+              訂購截止：<span class="fw-semibold text-dark">${escapeHtml(formatDeadline_(r.deadline) || '未設定')}</span>
+            </div>
+            ${r.paymentDeadline ? `<div class="small text-muted mb-1">付款截止：<span class="fw-semibold text-dark">${escapeHtml(formatDeadline_(r.paymentDeadline))}</span></div>` : ''}
+            <div class="small text-muted mb-3">
+              訂購人數：<span class="fw-semibold text-dark">${r.orderCount}</span> 人
+            </div>
+            <div class="mt-auto d-grid gap-2">
+              <button type="button" class="btn btn-order" onclick="goToShop('${r.batch}')">
+                <i class="bi bi-bag-plus me-1"></i>我要訂購
+              </button>
+              <button type="button" class="btn btn-status" onclick="goToStatus('${r.batch}', '${escapeHtml(r.title || r.storeName).replace(/'/g, "\\'")}')">
+                <i class="bi bi-search me-1"></i>查看訂購狀態
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    listEl.innerHTML = `<div class="col-12"><div class="alert alert-danger">連線失敗，請確認網路或稍後再試。</div></div>`;
+    console.error(err);
+  }
+}
+
+function goToShop(batch) {
+  selectedBatch = batch;
+  cart = {};
+  switchPage('shop');
+  loadProductList();
+}
+
+async function loadProductList() {
+  const listEl = document.getElementById('productList');
+  if (!selectedBatch) {
+    listEl.innerHTML = `<div class="col-12 text-muted">請先從「目前開團中」選擇要訂購的團。</div>`;
+    return;
+  }
+  listEl.innerHTML = `<div class="col-12 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>商品載入中...</div>`;
+  try {
+    const res = await apiGet('getProducts', { batch: selectedBatch });
+    if (!res.ok) {
+      listEl.innerHTML = `<div class="col-12"><div class="alert alert-danger">商品載入失敗：${res.error}</div></div>`;
+      return;
+    }
+    products = res.data;
+    if (res.round) {
+      document.getElementById('shopTitle').textContent = res.round.title || '商品清單';
+      document.getElementById('shopDeadline').textContent = res.round.deadline ? `訂購截止：${formatDeadline_(res.round.deadline)}` : '';
+    }
+    if (products.length === 0) {
+      listEl.innerHTML = `<div class="col-12 text-muted">目前尚無上架商品</div>`;
+      return;
+    }
+    listEl.innerHTML = products.map(p => `
+      <div class="col-sm-6 col-lg-3">
+        <div class="card product-card border-0 shadow-sm h-100">
+          ${p['圖片網址']
+            ? `<div class="product-img-wrap"><img src="${p['圖片網址']}" class="card-img-top product-img" loading="lazy"></div>`
+            : `<div class="product-img-wrap product-img-placeholder"><i class="bi bi-image text-secondary fs-1"></i></div>`}
+          <div class="card-body d-flex flex-column">
+            <h6 class="fw-bold mb-1">${escapeHtml(p['品名'])}</h6>
+            <div class="text-muted small mb-2">${escapeHtml(p['規格'] || '')}</div>
+            <div class="fw-bold text-primary mb-3">${fmtMoney(p['單價'])}</div>
+            <div class="mt-auto d-flex align-items-center gap-2">
+              <input type="number" min="0" value="0" class="form-control form-control-sm qty-input"
+                     data-code="${p['編號']}" onchange="updateCart('${p['編號']}', this.value)">
+              <span class="text-muted small">份</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    listEl.innerHTML = `<div class="col-12"><div class="alert alert-danger">連線失敗，請確認網路或稍後再試。</div></div>`;
+    console.error(err);
+  }
+}
+
+function updateCart(code, qty) {
+  qty = parseInt(qty, 10) || 0;
+  if (qty <= 0) delete cart[code]; else cart[code] = qty;
+  renderCart();
+}
+
+function renderCart() {
+  const cartEl = document.getElementById('cartItems');
+  const codes = Object.keys(cart);
+  if (codes.length === 0) {
+    cartEl.innerHTML = '<div class="text-muted small">尚未選購商品</div>';
+    document.getElementById('cartTotal').textContent = fmtMoney(0);
+    return;
+  }
+  let total = 0;
+  cartEl.innerHTML = codes.map(code => {
+    const p = products.find(x => x['編號'] === code);
+    if (!p) return '';
+    const sub = p['單價'] * cart[code];
+    total += sub;
+    return `<div class="d-flex justify-content-between small mb-1">
+      <span>${escapeHtml(p['品名'])} x${cart[code]}</span><span>${fmtMoney(sub)}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('cartTotal').textContent = fmtMoney(total);
+}
+
+document.getElementById('orderForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const codes = Object.keys(cart);
+  if (codes.length === 0) { toast('提醒', '請至少選擇一項商品'); return; }
+  const items = codes.map(code => {
+    const p = products.find(x => x['編號'] === code);
+    return { code, name: p['品名'], price: p['單價'], qty: cart[code] };
+  });
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>送出中...';
+
+  try {
+    const res = await apiPost({
+      action: 'submitOrder',
+      batch: selectedBatch,
+      name: document.getElementById('fName').value.trim(),
+      dept: document.getElementById('fDept').value.trim(),
+      contact: document.getElementById('fContact').value.trim(),
+      note: document.getElementById('fNote').value.trim(),
+      items
+    });
+
+    if (res.ok) {
+      document.getElementById('successOrderId').textContent = res.data.orderId;
+      document.getElementById('successTotal').textContent = fmtMoney(res.data.total);
+      lastOrderId = res.data.orderId;
+      new bootstrap.Modal(document.getElementById('successModal')).show();
+      cart = {};
+      renderCart();
+      document.querySelectorAll('.qty-input').forEach(el => el.value = 0);
+      e.target.reset();
+    } else {
+      toast('送出失敗', res.error || '未知錯誤');
+    }
+  } catch (err) {
+    toast('連線錯誤', String(err));
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-send-check me-1"></i>送出訂單';
+  }
+});
+
+// ---------- 查看訂購狀態（清單呈現，姓名去識別化） ----------
+let lastOrderId = '';
+let publicOrders = [];
+let statusFilterBatch = '';
+let statusFilterTitle = '';
+
+function goToStatus(batch, title) {
+  statusFilterBatch = batch || '';
+  statusFilterTitle = title || '';
+  switchPage('status');
+}
+
+function goToStatusFromSuccess() {
+  statusFilterBatch = selectedBatch || '';
+  statusFilterTitle = document.getElementById('shopTitle').textContent.trim();
+  switchPage('status');
+  if (lastOrderId) {
+    document.getElementById('statusSearchKeyword').value = lastOrderId;
+    renderPublicOrders();
+  }
+}
+
+async function loadPublicOrders() {
+  const tbody = document.getElementById('publicOrdersTbody');
+  tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-3"><span class="spinner-border spinner-border-sm me-2"></span>載入中...</td></tr>`;
+  try {
+    const res = await apiGet('getPublicOrders');
+    if (!res.ok) {
+      tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-3">載入失敗：${res.error}</td></tr>`;
+      return;
+    }
+    publicOrders = res.data;
+    renderPublicOrders();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-3">連線失敗，請稍後再試。</td></tr>`;
+  }
+}
+
+function renderPublicOrders() {
+  const kw = document.getElementById('statusSearchKeyword').value.trim().toLowerCase();
+  const tbody = document.getElementById('publicOrdersTbody');
+  const hintEl = document.getElementById('statusFilterHint');
+
+  if (statusFilterBatch) {
+    document.getElementById('statusFilterTitle').textContent = statusFilterTitle || statusFilterBatch;
+    hintEl.classList.remove('d-none');
+  } else {
+    hintEl.classList.add('d-none');
+  }
+
+  let list = publicOrders.filter(o => {
+    if (statusFilterBatch && String(o.batch || '') !== statusFilterBatch) return false;
+    if (!kw) return true;
+    const hay = `${o.orderId} ${o.dept}`.toLowerCase();
+    return hay.includes(kw);
+  });
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-3">沒有符合條件的訂單</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.slice().reverse().map(o => `
+    <tr>
+      <td class="small text-center">${escapeHtml(o.orderId)}</td>
+      <td class="small text-nowrap text-center">${formatDate(o.time)}</td>
+      <td class="text-center">${escapeHtml(o.name)}</td>
+      <td class="text-center">${escapeHtml(o.dept)}</td>
+      <td class="small">${escapeHtml(o.items)}</td>
+      <td class="text-end fw-semibold pe-4">${fmtMoney(o.total)}</td>
+      <td class="text-center">${payBadge(o.payStatus)}</td>
+      <td class="text-center">${shipBadge(o.shipStatus)}</td>
+      <td class="text-nowrap text-center">
+        ${o.payStatus === '未付款' ? `<button class="btn btn-sm btn-outline-primary" onclick="reportPaymentFor('${o.orderId}')">回報付款</button>` : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function reportPaymentFor(orderId) {
+  const info = prompt('請輸入付款資訊（例如：轉帳後五碼 12345）');
+  if (!info || !info.trim()) return;
+  try {
+    const res = await apiPost({ action: 'reportPayment', orderId, paymentInfo: info.trim() });
+    if (res.ok) {
+      toast('回報成功', '已收到付款回報，管理人員將盡快確認。');
+      loadPublicOrders();
+    } else {
+      toast('回報失敗', res.error || '未知錯誤');
+    }
+  } catch (err) {
+    toast('連線錯誤', String(err));
+  }
+}
+
+// ---------- 管理員登入 / 登出 ----------
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+  try {
+    const res = await apiPost({ action: 'login', password });
+    if (res.ok) {
+      token = res.data.token;
+      sessionStorage.setItem('gb_admin_token', token);
+      bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+      document.getElementById('loginForm').reset();
+      enterAdminMode();
+    } else {
+      errEl.textContent = res.error || '登入失敗';
+      errEl.style.display = 'block';
+    }
+  } catch (err) {
+    errEl.textContent = '連線失敗：' + err;
+    errEl.style.display = 'block';
+  }
+});
+
+function enterAdminMode() {
+  document.getElementById('adminLoginBtn').classList.add('d-none');
+  document.getElementById('adminLogoutBtn').classList.remove('d-none');
+  document.getElementById('adminSectionLabel').classList.remove('d-none');
+  document.querySelectorAll('.admin-nav').forEach(el => el.classList.remove('d-none'));
+}
+
+function logout() {
+  sessionStorage.removeItem('gb_admin_token');
+  token = '';
+  document.getElementById('adminLoginBtn').classList.remove('d-none');
+  document.getElementById('adminLogoutBtn').classList.add('d-none');
+  document.getElementById('adminSectionLabel').classList.add('d-none');
+  document.querySelectorAll('.admin-nav').forEach(el => el.classList.add('d-none'));
+  switchPage('landing');
+}
+
+// ---------- 訂單管理（管理員） ----------
+async function loadOrders() {
+  const res = await apiGet('getOrders', { token });
+  if (!res.ok) {
+    if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
+    toast('載入失敗', res.error);
+    return;
+  }
+  orders = res.data;
+  renderStats();
+  renderOrders();
+}
+
+function renderStats() {
+  const total = orders.length;
+  const totalAmount = orders.reduce((s, o) => s + Number(o['總金額'] || 0), 0);
+  const unpaid = orders.filter(o => o['付款狀態'] === '未付款').length;
+  const pending = orders.filter(o => o['付款狀態'] === '已回報，待確認').length;
+
+  const cards = [
+    { label: '總訂單數', value: total, icon: 'bi-receipt', color: 'primary' },
+    { label: '總金額', value: fmtMoney(totalAmount), icon: 'bi-cash-stack', color: 'success' },
+    { label: '未付款', value: unpaid, icon: 'bi-exclamation-circle', color: 'danger' },
+    { label: '待確認付款', value: pending, icon: 'bi-hourglass-split', color: 'warning' },
+  ];
+  document.getElementById('statsRow').innerHTML = cards.map(c => `
+    <div class="col-12 col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body d-flex align-items-center">
+          <div class="flex-shrink-0 bg-${c.color} bg-opacity-10 rounded p-3">
+            <i class="bi ${c.icon} fs-4 text-${c.color}"></i>
+          </div>
+          <div class="ms-3">
+            <div class="text-muted small">${c.label}</div>
+            <div class="fs-5 fw-bold">${c.value}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function payBadge(status) {
+  if (status === '已確認') return '<span class="badge bg-success">已確認</span>';
+  if (status === '已回報，待確認') return '<span class="badge bg-warning text-dark">待確認</span>';
+  return '<span class="badge bg-secondary">未付款</span>';
+}
+function shipBadge(status) {
+  if (status === '已出貨') return '<span class="badge bg-success">已出貨</span>';
+  return '<span class="badge bg-secondary">未出貨</span>';
+}
+
+function parseItemsString_(itemsStr) {
+  // 解析下單時產生的格式，例如「海苔地瓜酥 x2、黑糖地瓜酥 x1」
+  const result = [];
+  String(itemsStr || '').split('、').forEach(part => {
+    const m = part.trim().match(/^(.+?)\s*x(\d+)$/i);
+    if (m) {
+      result.push({ name: m[1].trim(), qty: parseInt(m[2], 10) || 0 });
+    }
+  });
+  return result;
+}
+
+function renderItemSummary_(list) {
+  const tbody = document.getElementById('itemSummaryTbody');
+  if (!tbody) return;
+  const summary = {};
+  list.forEach(o => {
+    parseItemsString_(o['品項明細']).forEach(({ name, qty }) => {
+      summary[name] = (summary[name] || 0) + qty;
+    });
+  });
+  const entries = Object.entries(summary).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" class="text-center text-muted py-2">尚無資料</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = entries.map(([name, qty]) => `
+    <tr><td>${escapeHtml(name)}</td><td class="text-center fw-semibold">${qty}</td></tr>
+  `).join('');
+}
+
+function renderOrders() {
+  const kw = document.getElementById('searchKeyword').value.trim().toLowerCase();
+  const payFilter = document.getElementById('filterPayStatus').value;
+  const shipFilter = document.getElementById('filterShipStatus').value;
+  const batchFilter = document.getElementById('filterOrderBatch').value;
+  const storeFilter = document.getElementById('filterOrderStore').value;
+
+  populateFilterOptions_('filterOrderBatch', orders.map(o => o['梯次']), '全部梯次');
+  populateFilterOptions_('filterOrderStore', orders.map(o => o['店家名稱']), '全部店家');
+
+  let list = orders.filter(o => {
+    if (payFilter && o['付款狀態'] !== payFilter) return false;
+    if (shipFilter && o['出貨狀態'] !== shipFilter) return false;
+    if (batchFilter && String(o['梯次'] || '') !== batchFilter) return false;
+    if (storeFilter && String(o['店家名稱'] || '') !== storeFilter) return false;
+    if (kw) {
+      const hay = `${o['訂單編號']} ${o['姓名']} ${o['部門']}`.toLowerCase();
+      if (!hay.includes(kw)) return false;
+    }
+    return true;
+  });
+
+  renderItemSummary_(list);
+
+  const tbody = document.getElementById('ordersTbody');
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="13" class="text-center text-muted py-3">沒有符合條件的訂單</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.slice().reverse().map(o => `
+    <tr>
+      <td class="small text-center">${escapeHtml(o['訂單編號'])}</td>
+      <td class="small text-nowrap text-center">${formatDate(o['時間'])}</td>
+      <td class="text-center">${escapeHtml(o['姓名'])}</td>
+      <td class="text-center">${escapeHtml(o['部門'])}</td>
+      <td class="small">${escapeHtml(o['品項明細'])}</td>
+      <td class="text-end fw-semibold">${fmtMoney(o['總金額'])}</td>
+      <td class="text-center">${payBadge(o['付款狀態'])}</td>
+      <td class="small text-center">${escapeHtml(o['付款資訊'] || '')}</td>
+      <td class="text-center">${shipBadge(o['出貨狀態'])}</td>
+      <td class="small text-center">${escapeHtml(o['梯次'] || '')}</td>
+      <td class="small text-center">${escapeHtml(o['店家名稱'] || '')}</td>
+      <td class="small">${escapeHtml(o['備註'] || '')}</td>
+      <td class="text-nowrap text-center">
+        ${o['付款狀態'] !== '已確認' ? `<button class="btn btn-sm btn-success" onclick="updateStatus('${o['訂單編號']}','付款狀態','已確認')">確認付款</button>` : ''}
+        ${o['出貨狀態'] !== '已出貨' ? `<button class="btn btn-sm btn-outline-primary" onclick="updateStatus('${o['訂單編號']}','出貨狀態','已出貨')">標記交貨</button>` : ''}
+        <button class="btn btn-sm btn-outline-secondary" onclick="startEditOrder('${o['訂單編號']}')">修改訂單</button>
+        <button class="btn btn-sm btn-outline-danger" onclick="deleteOrder('${o['訂單編號']}')">刪除訂單</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function startEditOrder(orderId) {
+  const order = orders.find(o => o['訂單編號'] === orderId);
+  if (!order) return;
+
+  document.getElementById('eoOrderId').value = orderId;
+  document.getElementById('eoName').value = order['姓名'] || '';
+  document.getElementById('eoDept').value = order['部門'] || '';
+  document.getElementById('eoNote').value = order['備註'] || '';
+
+  if (storesData.length === 0) {
+    const sres = await apiGet('getStores', { token });
+    if (sres.ok) storesData = sres.data;
+  }
+  if (productsData.length === 0) {
+    const pres = await apiGet('getAllProductsAdmin', { token });
+    if (pres.ok) productsData = pres.data;
+  }
+
+  const store = storesData.find(s => s['店家名稱'] === order['店家名稱']);
+  const storeProducts = store ? productsData.filter(p => String(p['店家編號']) === String(store['店家編號'])) : [];
+  const existingItems = parseItemsString_(order['品項明細']);
+  const existingMap = {};
+  existingItems.forEach(it => { existingMap[it.name] = it.qty; });
+
+  // 合併：這個店家目前的商品目錄 + 訂單裡有但目錄中已找不到的品項（可能已下架或改名）
+  const rows = storeProducts.map(p => ({
+    name: p['品名'], price: Number(p['單價']) || 0, qty: existingMap[p['品名']] || 0, fromCatalog: true
+  }));
+  existingItems.forEach(it => {
+    if (!rows.some(r => r.name === it.name)) {
+      rows.push({ name: it.name, price: 0, qty: it.qty, fromCatalog: false });
+    }
+  });
+
+  const listEl = document.getElementById('eoItemsList');
+  if (rows.length === 0) {
+    listEl.innerHTML = `<div class="text-muted small">找不到這個店家的商品目錄，請直接在下方備註說明要調整的內容。</div>`;
+  } else {
+    listEl.innerHTML = rows.map(r => `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small">${escapeHtml(r.name)}${r.fromCatalog ? '' : '（原品項，目錄中找不到）'} ${r.price ? `<span class="text-muted">NT$${r.price}</span>` : ''}</span>
+        <input type="number" min="0" class="form-control form-control-sm" style="width:80px"
+               data-name="${escapeHtml(r.name)}" data-price="${r.price}" value="${r.qty}"
+               oninput="updateEoTotalPreview()">
+      </div>
+    `).join('');
+  }
+  updateEoTotalPreview();
+  new bootstrap.Modal(document.getElementById('editOrderModal')).show();
+}
+
+function updateEoTotalPreview() {
+  const inputs = document.querySelectorAll('#eoItemsList input[type="number"]');
+  let total = 0;
+  inputs.forEach(inp => {
+    const qty = parseInt(inp.value, 10) || 0;
+    const price = parseFloat(inp.dataset.price) || 0;
+    total += qty * price;
+  });
+  document.getElementById('eoTotalPreview').textContent = fmtMoney(total);
+}
+
+async function saveEditOrder() {
+  const orderId = document.getElementById('eoOrderId').value;
+  const name = document.getElementById('eoName').value.trim();
+  const dept = document.getElementById('eoDept').value.trim();
+  const note = document.getElementById('eoNote').value.trim();
+  if (!name || !dept) { toast('提醒', '姓名、部門都要填寫'); return; }
+
+  const inputs = document.querySelectorAll('#eoItemsList input[type="number"]');
+  let total = 0;
+  const itemParts = [];
+  inputs.forEach(inp => {
+    const qty = parseInt(inp.value, 10) || 0;
+    if (qty > 0) {
+      const price = parseFloat(inp.dataset.price) || 0;
+      total += qty * price;
+      itemParts.push(`${inp.dataset.name} x${qty}`);
+    }
+  });
+  if (itemParts.length === 0) { toast('提醒', '至少要有一項商品數量大於 0'); return; }
+  const itemsStr = itemParts.join('、');
+
+  const updates = [
+    { field: '姓名', value: name },
+    { field: '部門', value: dept },
+    { field: '品項明細', value: itemsStr },
+    { field: '總金額', value: total },
+    { field: '備註', value: note }
+  ];
+  const results = await Promise.all(updates.map(u => apiPost({ action: 'updateOrderInfo', token, orderId, field: u.field, value: u.value })));
+  if (results.every(r => r.ok)) {
+    toast('更新成功', '訂單資料已更新');
+    bootstrap.Modal.getInstance(document.getElementById('editOrderModal')).hide();
+    loadOrders();
+  } else {
+    const firstError = results.find(r => !r.ok);
+    toast('更新失敗', firstError ? firstError.error : '未知錯誤');
+  }
+}
+
+async function deleteOrder(orderId) {
+  if (!confirm(`確定要刪除訂單 ${orderId} 嗎？這個動作無法復原。`)) return;
+  const res = await apiPost({ action: 'deleteOrder', token, orderId });
+  if (res.ok) {
+    toast('刪除成功', `訂單 ${orderId} 已刪除`);
+    loadOrders();
+  } else {
+    toast('刪除失敗', res.error);
+  }
+}
+
+function populateFilterOptions_(selectId, values, allLabel) {
+  const select = document.getElementById(selectId);
+  const current = select.value;
+  const distinct = [...new Set(values.map(v => String(v || '').trim()).filter(Boolean))];
+  const optionsHtml = [`<option value="">${allLabel}</option>`]
+    .concat(distinct.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b)}</option>`));
+  select.innerHTML = optionsHtml.join('');
+  if (distinct.includes(current)) select.value = current;
+}
+
+function formatDate(v) {
+  if (!v) return '';
+  try {
+    const d = new Date(v);
+    if (isNaN(d)) return v;
+    return d.toLocaleString('zh-TW', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+  } catch { return v; }
+}
+
+async function updateStatus(orderId, field, value) {
+  const res = await apiPost({ action: 'updateOrderStatus', token, orderId, field, value });
+  if (res.ok) {
+    toast('更新成功', `${orderId} 的 ${field} 已更新為「${value}」`);
+    loadOrders();
+  } else {
+    toast('更新失敗', res.error);
+  }
+}
+
+function exportCsv() {
+  if (orders.length === 0) { toast('提醒', '沒有可匯出的資料'); return; }
+  const headers = ['訂單編號','時間','姓名','部門','聯絡方式','品項明細','總金額','付款狀態','付款資訊','付款回報時間','出貨狀態','備註','梯次','店家名稱'];
+  const rows = orders.map(o => headers.map(h => `"${String(o[h] ?? '').replace(/"/g,'""')}"`).join(','));
+  const csv = '\uFEFF' + headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `訂單匯出_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- 商品管理（管理員） ----------
+async function loadProducts() {
+  const res = await apiGet('getAllProductsAdmin', { token });
+  if (!res.ok) {
+    if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
+    toast('載入失敗', res.error);
+    return;
+  }
+  productsData = res.data;
+  renderProducts();
+}
+
+function renderProducts() {
+  const storeId = document.getElementById('manageStoreSelect').value;
+  const tbody = document.getElementById('productsTbody');
+
+  if (!storeId) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">請先選擇上方的店家</td></tr>`;
+    return;
+  }
+
+  const list = productsData.filter(p => String(p['店家編號'] || '') === storeId);
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">這個店家還沒有商品，請用上面的表單新增</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(p => `
+    <tr>
+      <td class="small">${escapeHtml(p['編號'])}</td>
+      <td>${escapeHtml(p['品名'])}</td>
+      <td class="small">${escapeHtml(p['規格'] || '')}</td>
+      <td class="text-end">${fmtMoney(p['單價'])}</td>
+      <td class="small text-truncate" style="max-width:160px;">${escapeHtml(p['圖片網址'] || '')}</td>
+      <td>
+        <select class="form-select form-select-sm" style="width:100px" onchange="toggleStatus('${p['編號']}', this.value)">
+          <option value="上架" ${p['狀態']==='上架'?'selected':''}>上架</option>
+          <option value="下架" ${p['狀態']==='下架'?'selected':''}>下架</option>
+        </select>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function toggleStatus(code, value) {
+  const res = await apiPost({ action: 'updateProduct', token, code, field: '狀態', value });
+  if (res.ok) {
+    toast('更新成功', `${code} 狀態已更新為「${value}」`);
+    loadProducts();
+  } else {
+    toast('更新失敗', res.error);
+  }
+}
+
+document.getElementById('manageStoreSelect').addEventListener('change', renderProducts);
+
+document.getElementById('addProductForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const storeId = document.getElementById('manageStoreSelect').value;
+  if (!storeId) { toast('提醒', '請先在上方選擇要新增商品的店家'); return; }
+  const payload = {
+    action: 'addProduct',
+    token,
+    storeId,
+    name: document.getElementById('npName').value.trim(),
+    spec: document.getElementById('npSpec').value.trim(),
+    price: document.getElementById('npPrice').value,
+    imageUrl: document.getElementById('npImage').value.trim()
+  };
+  const res = await apiPost(payload);
+  if (res.ok) {
+    toast('新增成功', `已新增商品 ${res.data.code}`);
+    e.target.reset();
+    loadProducts();
+  } else {
+    toast('新增失敗', res.error);
+  }
+});
+
+// ---------- 店家管理（管理員） ----------
+async function loadStores() {
+  const res = await apiGet('getStores', { token });
+  if (!res.ok) {
+    if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
+    toast('載入失敗', res.error);
+    return;
+  }
+  storesData = res.data;
+  renderStores();
+  populateStoreSelects_();
+}
+
+function renderStores() {
+  const tbody = document.getElementById('storesTbody');
+  if (storesData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">尚無店家，請用下方表單新增</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = storesData.map(s => `
+    <tr>
+      <td class="small">${escapeHtml(s['店家編號'])}</td>
+      <td>
+        <input type="text" class="form-control form-control-sm" value="${escapeHtml(s['店家名稱'] || '')}"
+               onchange="updateStore('${s['店家編號']}','店家名稱', this.value)">
+      </td>
+      <td>
+        <input type="text" class="form-control form-control-sm" value="${escapeHtml(s['縮圖網址'] || '')}"
+               onchange="updateStore('${s['店家編號']}','縮圖網址', this.value)">
+      </td>
+      <td>
+        <input type="text" class="form-control form-control-sm" value="${escapeHtml(s['備註'] || '')}"
+               onchange="updateStore('${s['店家編號']}','備註', this.value)">
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function updateStore(storeId, field, value) {
+  const res = await apiPost({ action: 'updateStore', token, storeId, field, value: value.trim() });
+  if (res.ok) {
+    toast('更新成功', `店家資料已更新`);
+    loadStores();
+    if (field === '店家名稱' || field === '縮圖網址') loadConfig();
+  } else {
+    toast('更新失敗', res.error);
+  }
+}
+
+function populateStoreSelects_() {
+  const optionsHtml = storesData.map(s => `<option value="${s['店家編號']}">${escapeHtml(s['店家名稱'])}</option>`).join('');
+  ['nbStoreSelect', 'manageStoreSelect'].forEach(id => {
+    const select = document.getElementById(id);
+    const current = select.value;
+    const placeholder = id === 'nbStoreSelect' ? '選擇店家' : '選擇要管理的店家';
+    select.innerHTML = `<option value="">${placeholder}</option>` + optionsHtml;
+    if (storesData.some(s => s['店家編號'] === current)) select.value = current;
+  });
+  renderProducts();
+}
+
+document.getElementById('addStoreForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const payload = {
+    action: 'addStore',
+    token,
+    name: document.getElementById('nsName').value.trim(),
+    image: document.getElementById('nsImage').value.trim(),
+    note: document.getElementById('nsNote').value.trim()
+  };
+  const res = await apiPost(payload);
+  if (res.ok) {
+    toast('新增成功', `已新增店家「${payload.name}」`);
+    e.target.reset();
+    await loadStores();
+    document.getElementById('manageStoreSelect').value = res.data.storeId;
+    renderProducts();
+  } else {
+    toast('新增失敗', res.error);
+  }
+});
+
+document.getElementById('newBatchForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const storeId = document.getElementById('nbStoreSelect').value;
+  if (!storeId) { toast('提醒', '請選擇要開團的店家'); return; }
+
+  const payload = {
+    action: 'createRound',
+    token,
+    storeId,
+    title: document.getElementById('nbTitle').value.trim(),
+    orgUnit: document.getElementById('nbOrgUnit').value.trim(),
+    inviteUnit: document.getElementById('nbInviteUnit').value.trim(),
+    deadline: document.getElementById('nbDeadline').value,
+    paymentDeadline: document.getElementById('nbPaymentDeadline').value
+  };
+  const res = await apiPost(payload);
+  if (res.ok) {
+    toast('開團成功', `已開新的一團「${res.data.title}」，首頁會多一張新的卡片`);
+    e.target.reset();
+    loadRounds();
+  } else {
+    toast('開團失敗', res.error);
+  }
+});
+
+// ---------- 場次管理（管理員） ----------
+let editingRoundBatch = '';
+
+function toDatetimeLocalValue_(v) {
+  if (!v) return '';
+  return v.includes('T') ? v.slice(0, 16) : `${v}T00:00`;
+}
+
+async function loadRounds() {
+  const res = await apiGet('getRounds', { token });
+  if (!res.ok) {
+    if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
+    toast('載入失敗', res.error);
+    return;
+  }
+  roundsData = res.data;
+  renderRounds();
+}
+
+function renderRounds() {
+  const countLabel = document.getElementById('activeRoundCountLabel');
+  if (countLabel) countLabel.textContent = roundsData.filter(r => r.status === '進行中').length;
+
+  const tbody = document.getElementById('roundsTbody');
+  if (!tbody) return;
+  if (roundsData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-3">尚無場次紀錄</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = roundsData.map(r => {
+    if (r.batch === editingRoundBatch) {
+      return `
+        <tr>
+          <td class="small">${escapeHtml(r.batch)}</td>
+          <td>${escapeHtml(r.storeName)}</td>
+          <td><input type="text" class="form-control form-control-sm" id="editTitle_${r.batch}" value="${escapeHtml(r.title)}"></td>
+          <td><input type="text" class="form-control form-control-sm" id="editOrgUnit_${r.batch}" value="${escapeHtml(r.orgUnit || '')}"></td>
+          <td><input type="text" class="form-control form-control-sm" id="editInviteUnit_${r.batch}" value="${escapeHtml(r.inviteUnit || '')}"></td>
+          <td><input type="datetime-local" class="form-control form-control-sm" id="editDeadline_${r.batch}" value="${toDatetimeLocalValue_(r.deadline)}"></td>
+          <td><input type="datetime-local" class="form-control form-control-sm" id="editPaymentDeadline_${r.batch}" value="${toDatetimeLocalValue_(r.paymentDeadline)}"></td>
+          <td>${r.status === '進行中' ? '<span class="badge bg-success">進行中</span>' : '<span class="badge bg-secondary">已結束</span>'}</td>
+          <td class="text-nowrap">
+            <button class="btn btn-sm btn-primary" onclick="saveEditRound('${r.batch}')">儲存</button>
+            <button class="btn btn-sm btn-outline-secondary" onclick="cancelEditRound()">取消</button>
+          </td>
+        </tr>`;
+    }
+    return `
+      <tr>
+        <td class="small">${escapeHtml(r.batch)}</td>
+        <td>${escapeHtml(r.storeName)}</td>
+        <td>${escapeHtml(r.title)}</td>
+        <td class="small">${escapeHtml(r.orgUnit || '')}</td>
+        <td class="small">${escapeHtml(r.inviteUnit || '')}</td>
+        <td class="small">${escapeHtml(formatDeadline_(r.deadline))}</td>
+        <td class="small">${escapeHtml(formatDeadline_(r.paymentDeadline))}</td>
+        <td>${r.status === '進行中' ? '<span class="badge bg-success">進行中</span>' : '<span class="badge bg-secondary">已結束</span>'}</td>
+        <td class="text-nowrap">
+          <button class="btn btn-sm btn-outline-primary" onclick="startEditRound('${r.batch}')">編輯</button>
+          ${r.status === '進行中'
+            ? `<button class="btn btn-sm btn-outline-secondary" onclick="setRoundStatus('${r.batch}','已結束')">結束此團</button>`
+            : `<button class="btn btn-sm btn-outline-success" onclick="setRoundStatus('${r.batch}','進行中')">重新開放</button>`}
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function startEditRound(batch) {
+  editingRoundBatch = batch;
+  renderRounds();
+}
+
+function cancelEditRound() {
+  editingRoundBatch = '';
+  renderRounds();
+}
+
+async function saveEditRound(batch) {
+  const title = document.getElementById(`editTitle_${batch}`).value.trim();
+  const orgUnit = document.getElementById(`editOrgUnit_${batch}`).value.trim();
+  const inviteUnit = document.getElementById(`editInviteUnit_${batch}`).value.trim();
+  const deadline = document.getElementById(`editDeadline_${batch}`).value;
+  const paymentDeadline = document.getElementById(`editPaymentDeadline_${batch}`).value;
+  if (!title || !deadline) { toast('提醒', '團購標題與訂購截止時間都要填寫'); return; }
+
+  const updates = [
+    { field: '團購標題', value: title },
+    { field: '截止日期', value: deadline },
+    { field: '開團單位', value: orgUnit },
+    { field: '邀請單位', value: inviteUnit },
+    { field: '付款截止時間', value: paymentDeadline }
+  ];
+  const results = await Promise.all(updates.map(u => apiPost({ action: 'updateRound', token, batch, field: u.field, value: u.value })));
+  if (results.every(r => r.ok)) {
+    toast('更新成功', '場次資料已更新');
+    editingRoundBatch = '';
+    loadRounds();
+  } else {
+    const firstError = results.find(r => !r.ok);
+    toast('更新失敗', firstError ? firstError.error : '未知錯誤');
+  }
+}
+
+async function setRoundStatus(batch, status) {
+  const res = await apiPost({ action: 'setRoundStatus', token, batch, status });
+  if (res.ok) {
+    toast('更新成功', `場次已更新為「${status}」`);
+    loadRounds();
+  } else {
+    toast('更新失敗', res.error);
+  }
+}
+
+// ---------- 初始化 ----------
+loadConfig();
+loadActiveRounds();
+if (token) enterAdminMode();
+</script>
+</body>
+</html>
