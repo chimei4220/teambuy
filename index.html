@@ -689,7 +689,7 @@ function switchPage(page) {
     (hasPaymentInfo && !adminPages.includes(page)) ? 'block' : 'none';
 
   if (page === 'orders') loadOrders();
-  if (page === 'products') { loadProducts(); loadStores(); loadRounds(); }
+  if (page === 'products') loadProductsPageData();
   if (page === 'landing') loadActiveRounds();
   if (page === 'status') loadPublicOrders();
 }
@@ -1318,6 +1318,22 @@ function exportCsv() {
 }
 
 // ---------- 商品管理（管理員） ----------
+async function loadProductsPageData() {
+  const res = await apiGet('getProductsPageData', { token });
+  if (!res.ok) {
+    if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
+    toast('載入失敗', res.error);
+    return;
+  }
+  productsData = res.data.products;
+  storesData = res.data.stores;
+  roundsData = res.data.rounds;
+  renderProducts();
+  renderStores();
+  populateStoreSelects_();
+  renderRounds();
+}
+
 async function loadProducts() {
   const res = await apiGet('getAllProductsAdmin', { token });
   if (!res.ok) {
@@ -1364,7 +1380,7 @@ async function toggleStatus(code, value) {
   const res = await apiPost({ action: 'updateProduct', token, code, field: '狀態', value });
   if (res.ok) {
     toast('更新成功', `${code} 狀態已更新為「${value}」`);
-    loadProducts();
+    loadProductsPageData();
   } else {
     toast('更新失敗', res.error);
   }
@@ -1389,7 +1405,7 @@ document.getElementById('addProductForm').addEventListener('submit', async (e) =
   if (res.ok) {
     toast('新增成功', `已新增商品 ${res.data.code}`);
     e.target.reset();
-    loadProducts();
+    loadProductsPageData();
   } else {
     toast('新增失敗', res.error);
   }
@@ -1437,7 +1453,7 @@ async function updateStore(storeId, field, value) {
   const res = await apiPost({ action: 'updateStore', token, storeId, field, value: value.trim() });
   if (res.ok) {
     toast('更新成功', `店家資料已更新`);
-    loadStores();
+    loadProductsPageData();
     if (field === '店家名稱' || field === '縮圖網址') loadConfig();
   } else {
     toast('更新失敗', res.error);
@@ -1469,7 +1485,7 @@ document.getElementById('addStoreForm').addEventListener('submit', async (e) => 
   if (res.ok) {
     toast('新增成功', `已新增店家「${payload.name}」`);
     e.target.reset();
-    await loadStores();
+    await loadProductsPageData();
     document.getElementById('manageStoreSelect').value = res.data.storeId;
     renderProducts();
   } else {
@@ -1496,7 +1512,7 @@ document.getElementById('newBatchForm').addEventListener('submit', async (e) => 
   if (res.ok) {
     toast('開團成功', `已開新的一團「${res.data.title}」，首頁會多一張新的卡片`);
     e.target.reset();
-    loadRounds();
+    loadProductsPageData();
   } else {
     toast('開團失敗', res.error);
   }
@@ -1598,7 +1614,7 @@ async function saveEditRound(batch) {
   if (results.every(r => r.ok)) {
     toast('更新成功', '場次資料已更新');
     editingRoundBatch = '';
-    loadRounds();
+    loadProductsPageData();
   } else {
     const firstError = results.find(r => !r.ok);
     toast('更新失敗', firstError ? firstError.error : '未知錯誤');
@@ -1609,7 +1625,7 @@ async function setRoundStatus(batch, status) {
   const res = await apiPost({ action: 'setRoundStatus', token, batch, status });
   if (res.ok) {
     toast('更新成功', `場次已更新為「${status}」`);
-    loadRounds();
+    loadProductsPageData();
   } else {
     toast('更新失敗', res.error);
   }
