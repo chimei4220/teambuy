@@ -515,52 +515,47 @@
 
         <div class="card mb-3 border-0 shadow-sm">
           <div class="card-body">
-            <div class="row g-2 align-items-end">
-              <div class="col-md-4">
-                <label class="form-label small">梯次</label>
-                <select class="form-select form-select-sm" id="lpFilterBatch" onchange="regenerateLabelEntries_()">
-                  <option value="">全部梯次</option>
-                </select>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label small">店家</label>
-                <select class="form-select form-select-sm" id="lpFilterStore" onchange="regenerateLabelEntries_()">
-                  <option value="">全部店家</option>
-                </select>
-              </div>
-            </div>
+            <label class="form-label small fw-semibold">選擇梯次 <span class="text-danger">*</span></label>
+            <select class="form-select form-select-sm" id="lpFilterBatch" onchange="onLabelBatchSelected_()" style="max-width:420px;">
+              <option value="">請先選擇要列印標籤的梯次</option>
+            </select>
+            <div class="small text-muted mt-1">選了梯次才會載入那一團的訂單資料，不會一次讀取所有歷史訂單。</div>
           </div>
         </div>
 
-        <div class="card border-0 shadow-sm">
-          <div class="card-body">
-            <div class="row g-2 align-items-end mb-3">
-              <div class="col-auto">
-                <label class="form-label small fw-semibold">從第幾排開始</label>
-                <input type="number" min="1" max="25" value="1" class="form-control form-control-sm" id="lpStartRow" style="width:90px">
-              </div>
-              <div class="col-auto">
-                <label class="form-label small fw-semibold">從第幾欄開始</label>
-                <input type="number" min="1" max="7" value="1" class="form-control form-control-sm" id="lpStartCol" style="width:90px">
-              </div>
-              <div class="col-auto text-muted small">
-                （例如上次印到第2排第1格，這次就填「第2排、第2欄」開始）
-              </div>
-            </div>
+        <div id="lpEmptyHint" class="text-muted small py-4 text-center">請先在上方選擇梯次</div>
 
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="small fw-semibold">標籤清單（共 <span id="lpCount">0</span> 張）</span>
-              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="regenerateLabelEntries_()">重新產生清單</button>
-            </div>
-            <div id="lpLabelList" class="border rounded p-2" style="max-height:400px; overflow-y:auto;"></div>
+        <div id="lpContent" class="d-none">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <div class="row g-2 align-items-end mb-3">
+                <div class="col-auto">
+                  <label class="form-label small fw-semibold">從第幾排開始</label>
+                  <input type="number" min="1" max="25" value="1" class="form-control form-control-sm" id="lpStartRow" style="width:90px">
+                </div>
+                <div class="col-auto">
+                  <label class="form-label small fw-semibold">從第幾欄開始</label>
+                  <input type="number" min="1" max="7" value="1" class="form-control form-control-sm" id="lpStartCol" style="width:90px">
+                </div>
+                <div class="col-auto text-muted small">
+                  （例如上次印到第2排第1格，這次就填「第2排、第2欄」開始）
+                </div>
+              </div>
 
-            <div class="d-flex gap-2 mt-3">
-              <button type="button" class="btn btn-outline-secondary" onclick="exportLabelsCsv()">
-                <i class="bi bi-download me-1"></i>匯出 CSV（備用）
-              </button>
-              <button type="button" class="btn btn-primary" onclick="openLabelPrintPreview()">
-                <i class="bi bi-printer me-1"></i>產生列印預覽
-              </button>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small fw-semibold">標籤清單（共 <span id="lpCount">0</span> 張）</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="regenerateLabelEntries_()">重新產生清單</button>
+              </div>
+              <div id="lpLabelList" class="border rounded p-2" style="max-height:400px; overflow-y:auto;"></div>
+
+              <div class="d-flex gap-2 mt-3">
+                <button type="button" class="btn btn-outline-secondary" onclick="exportLabelsCsv()">
+                  <i class="bi bi-download me-1"></i>匯出 CSV（備用）
+                </button>
+                <button type="button" class="btn btn-primary" onclick="openLabelPrintPreview()">
+                  <i class="bi bi-printer me-1"></i>產生列印預覽
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1395,34 +1390,53 @@ const LABEL_MARGIN_TB_MM = 11;
 const LABEL_GAP_COL_MM = 2;
 const LABEL_GAP_ROW_MM = 0;
 
+let labelSourceOrders = [];
+
 async function loadLabelsPageData() {
-  // 沿用「訂單管理」已經載入的訂單資料；如果還沒載入過，先去讀一次
-  if (orders.length === 0) {
-    const res = await apiGet('getOrders', { token });
-    if (!res.ok) {
-      if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
-      toast('載入失敗', res.error);
-      return;
-    }
-    orders = res.data;
+  // 只讀輕量的梯次清單（不掃訂單表），選了梯次之後才去抓那個梯次的訂單
+  const res = await apiGet('getBatchList', { token });
+  if (!res.ok) {
+    if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
+    toast('載入失敗', res.error);
+    return;
   }
-  populateFilterOptions_('lpFilterBatch', orders.map(o => o['梯次']), '全部梯次');
-  populateFilterOptions_('lpFilterStore', orders.map(o => o['店家名稱']), '全部店家');
+  const select = document.getElementById('lpFilterBatch');
+  select.innerHTML = '<option value="">請先選擇要列印標籤的梯次</option>' +
+    res.data.map(r => `<option value="${escapeHtml(r.batch)}">${escapeHtml(r.title)}（${escapeHtml(r.storeName)}）${r.status === '已結束' ? '［已結束］' : ''}</option>`).join('');
+
+  document.getElementById('lpContent').classList.add('d-none');
+  document.getElementById('lpEmptyHint').classList.remove('d-none');
+  labelSourceOrders = [];
+  labelEntries = [];
+}
+
+async function onLabelBatchSelected_() {
+  const batch = document.getElementById('lpFilterBatch').value;
+  if (!batch) {
+    document.getElementById('lpContent').classList.add('d-none');
+    document.getElementById('lpEmptyHint').classList.remove('d-none');
+    return;
+  }
+
+  document.getElementById('lpEmptyHint').classList.remove('d-none');
+  document.getElementById('lpEmptyHint').innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>載入這個梯次的訂單中...';
+  document.getElementById('lpContent').classList.add('d-none');
+
+  const res = await apiGet('getOrdersByBatch', { token, batch });
+  if (!res.ok) {
+    if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
+    toast('載入失敗', res.error);
+    return;
+  }
+  labelSourceOrders = res.data;
+  document.getElementById('lpEmptyHint').classList.add('d-none');
+  document.getElementById('lpContent').classList.remove('d-none');
   regenerateLabelEntries_();
 }
 
 function regenerateLabelEntries_() {
-  const batchFilter = document.getElementById('lpFilterBatch')?.value || '';
-  const storeFilter = document.getElementById('lpFilterStore')?.value || '';
-
-  const sourceOrders = orders.filter(o => {
-    if (batchFilter && String(o['梯次'] || '') !== batchFilter) return false;
-    if (storeFilter && String(o['店家名稱'] || '') !== storeFilter) return false;
-    return true;
-  });
-
   const entries = [];
-  sourceOrders.forEach(o => {
+  labelSourceOrders.forEach(o => {
     const items = parseItemsString_(o['品項明細']);
     items.forEach(it => {
       for (let i = 0; i < it.qty; i++) {
