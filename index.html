@@ -137,6 +137,11 @@
               <i class="bi bi-box-seam me-2"></i>商品管理
             </a>
           </li>
+          <li class="nav-item d-none admin-nav">
+            <a class="nav-link" href="#" onclick="switchPage('labels');return false;">
+              <i class="bi bi-tags me-2"></i>列印標籤
+            </a>
+          </li>
         </ul>
       </div>
     </nav>
@@ -253,7 +258,6 @@
           </div>
         </div>
       </section>
-      </section>
 
       <!-- ============ 頁面：訂單管理（管理員） ============ -->
       <section class="page-section" data-page="orders">
@@ -321,11 +325,6 @@
               <div class="col-md-2">
                 <button class="btn btn-outline-secondary btn-sm w-100" onclick="exportCsv()">
                   <i class="bi bi-download me-1"></i>匯出 CSV
-                </button>
-              </div>
-              <div class="col-md-2">
-                <button class="btn btn-order btn-sm w-100" onclick="openLabelPrintModal()">
-                  <i class="bi bi-tags me-1"></i>列印標籤
                 </button>
               </div>
             </div>
@@ -508,6 +507,70 @@
         </div>
       </section>
 
+      <!-- ============ 頁面：列印標籤（管理員） ============ -->
+      <section class="page-section" data-page="labels">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h4 class="fw-bold mb-0">列印標籤</h4>
+        </div>
+
+        <div class="card mb-3 border-0 shadow-sm">
+          <div class="card-body">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-4">
+                <label class="form-label small">梯次</label>
+                <select class="form-select form-select-sm" id="lpFilterBatch" onchange="regenerateLabelEntries_()">
+                  <option value="">全部梯次</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">店家</label>
+                <select class="form-select form-select-sm" id="lpFilterStore" onchange="regenerateLabelEntries_()">
+                  <option value="">全部店家</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+          <div class="card-body">
+            <p class="small text-muted mb-3">
+              標籤清單依上方篩選條件自動產生，每個品項各印一張，可以在下方刪除不需要的標籤。
+              目前規格：鶴屋 7欄x25排（共175格），單格 27mm x 11mm。如果之後量到實際貼紙尺寸有出入，跟我說一聲我再調整。
+            </p>
+
+            <div class="row g-2 align-items-end mb-3">
+              <div class="col-auto">
+                <label class="form-label small fw-semibold">從第幾排開始</label>
+                <input type="number" min="1" max="25" value="1" class="form-control form-control-sm" id="lpStartRow" style="width:90px">
+              </div>
+              <div class="col-auto">
+                <label class="form-label small fw-semibold">從第幾欄開始</label>
+                <input type="number" min="1" max="7" value="1" class="form-control form-control-sm" id="lpStartCol" style="width:90px">
+              </div>
+              <div class="col-auto text-muted small">
+                （例如上次印到第2排第1格，這次就填「第2排、第2欄」開始）
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small fw-semibold">標籤清單（共 <span id="lpCount">0</span> 張）</span>
+              <button type="button" class="btn btn-sm btn-outline-secondary" onclick="regenerateLabelEntries_()">重新產生清單</button>
+            </div>
+            <div id="lpLabelList" class="border rounded p-2" style="max-height:400px; overflow-y:auto;"></div>
+
+            <div class="d-flex gap-2 mt-3">
+              <button type="button" class="btn btn-outline-secondary" onclick="exportLabelsCsv()">
+                <i class="bi bi-download me-1"></i>匯出 CSV（備用）
+              </button>
+              <button type="button" class="btn btn-primary" onclick="openLabelPrintPreview()">
+                <i class="bi bi-printer me-1"></i>產生列印預覽
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 </div>
@@ -596,51 +659,6 @@
 </div>
 
 <!-- 列印標籤 Modal（管理員） -->
-<div class="modal fade" id="labelPrintModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-tags me-2"></i>列印標籤</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <div class="modal-body">
-        <p class="small text-muted mb-3">
-          標籤清單依照目前「訂單管理」的篩選結果自動產生，每個品項各印一張，可以在下方刪除不需要的標籤。
-          目前規格：鶴屋 7欄x25排（共175格），單格 27mm x 11mm。如果之後量到實際貼紙尺寸有出入，跟我說一聲我再調整。
-        </p>
-
-        <div class="row g-2 align-items-end mb-3">
-          <div class="col-auto">
-            <label class="form-label small fw-semibold">從第幾排開始</label>
-            <input type="number" min="1" max="25" value="1" class="form-control form-control-sm" id="lpStartRow" style="width:90px">
-          </div>
-          <div class="col-auto">
-            <label class="form-label small fw-semibold">從第幾欄開始</label>
-            <input type="number" min="1" max="7" value="1" class="form-control form-control-sm" id="lpStartCol" style="width:90px">
-          </div>
-          <div class="col-auto text-muted small">
-            （例如上次印到第2排第1格，這次就填「第2排、第2欄」開始）
-          </div>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mb-2">
-          <span class="small fw-semibold">標籤清單（共 <span id="lpCount">0</span> 張）</span>
-          <button type="button" class="btn btn-sm btn-outline-secondary" onclick="regenerateLabelEntries_()">重新產生清單</button>
-        </div>
-        <div id="lpLabelList" class="border rounded p-2" style="max-height:320px; overflow-y:auto;"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" onclick="exportLabelsCsv()">
-          <i class="bi bi-download me-1"></i>匯出 CSV（備用）
-        </button>
-        <button type="button" class="btn btn-primary" onclick="openLabelPrintPreview()">
-          <i class="bi bi-printer me-1"></i>產生列印預覽
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
 <div class="toast-container position-fixed bottom-0 end-0 p-3">
   <div id="liveToast" class="toast" role="alert">
     <div class="toast-header">
@@ -665,7 +683,6 @@ let selectedBatch = '';
 let hasPaymentInfo = false;
 let token = sessionStorage.getItem('gb_admin_token') || '';
 let orders = [];
-let lastFilteredOrders = [];
 let labelEntries = [];
 let productsData = [];
 let storesData = [];
@@ -736,8 +753,8 @@ function switchPage(page) {
   if (sidebar.classList.contains('show')) {
     bootstrap.Collapse.getOrCreateInstance(sidebar).hide();
   }
-  // 管理頁面（訂單管理/商品管理）不顯示訂購注意事項卡片
-  const adminPages = ['orders', 'products'];
+  // 管理頁面（訂單管理/商品管理/列印標籤）不顯示訂購注意事項卡片
+  const adminPages = ['orders', 'products', 'labels'];
   document.getElementById('paymentInfoAlert').style.display =
     (hasPaymentInfo && !adminPages.includes(page)) ? 'block' : 'none';
 
@@ -745,6 +762,7 @@ function switchPage(page) {
   if (page === 'products') loadProductsPageData();
   if (page === 'landing') loadActiveRounds();
   if (page === 'status') loadPublicOrders();
+  if (page === 'labels') loadLabelsPageData();
 }
 
 // ---------- 團購設定 / 商品（公開） ----------
@@ -1185,7 +1203,6 @@ function renderOrders() {
 
   renderStats(list);
   renderItemSummary_(list);
-  lastFilteredOrders = list;
 
   const tbody = document.getElementById('ordersTbody');
   if (list.length === 0) {
@@ -1383,18 +1400,34 @@ const LABEL_MARGIN_TB_MM = 11;
 const LABEL_GAP_COL_MM = 2;
 const LABEL_GAP_ROW_MM = 0;
 
-function openLabelPrintModal() {
-  if (lastFilteredOrders.length === 0) {
-    toast('提醒', '目前篩選結果沒有訂單，請先調整上方篩選條件');
-    return;
+async function loadLabelsPageData() {
+  // 沿用「訂單管理」已經載入的訂單資料；如果還沒載入過，先去讀一次
+  if (orders.length === 0) {
+    const res = await apiGet('getOrders', { token });
+    if (!res.ok) {
+      if (String(res.error).includes('未授權')) { logout(); toast('請重新登入', '登入狀態已過期'); return; }
+      toast('載入失敗', res.error);
+      return;
+    }
+    orders = res.data;
   }
+  populateFilterOptions_('lpFilterBatch', orders.map(o => o['梯次']), '全部梯次');
+  populateFilterOptions_('lpFilterStore', orders.map(o => o['店家名稱']), '全部店家');
   regenerateLabelEntries_();
-  new bootstrap.Modal(document.getElementById('labelPrintModal')).show();
 }
 
 function regenerateLabelEntries_() {
+  const batchFilter = document.getElementById('lpFilterBatch')?.value || '';
+  const storeFilter = document.getElementById('lpFilterStore')?.value || '';
+
+  const sourceOrders = orders.filter(o => {
+    if (batchFilter && String(o['梯次'] || '') !== batchFilter) return false;
+    if (storeFilter && String(o['店家名稱'] || '') !== storeFilter) return false;
+    return true;
+  });
+
   const entries = [];
-  lastFilteredOrders.forEach(o => {
+  sourceOrders.forEach(o => {
     const items = parseItemsString_(o['品項明細']);
     items.forEach(it => {
       for (let i = 0; i < it.qty; i++) {
