@@ -534,11 +534,6 @@
 
         <div class="card border-0 shadow-sm">
           <div class="card-body">
-            <p class="small text-muted mb-3">
-              標籤清單依上方篩選條件自動產生，每個品項各印一張，可以在下方刪除不需要的標籤。
-              目前規格：鶴屋 7欄x25排（共175格），單格 27mm x 11mm。如果之後量到實際貼紙尺寸有出入，跟我說一聲我再調整。
-            </p>
-
             <div class="row g-2 align-items-end mb-3">
               <div class="col-auto">
                 <label class="form-label small fw-semibold">從第幾排開始</label>
@@ -1451,12 +1446,27 @@ function renderLabelList_() {
     listEl.innerHTML = `<div class="text-muted small text-center py-3">沒有標籤可以列印</div>`;
     return;
   }
-  listEl.innerHTML = labelEntries.map((e, i) => `
+  listEl.innerHTML = labelEntries.map((e, i) => {
+    const isLong = e.name.length > 3;
+    return `
     <div class="d-flex justify-content-between align-items-center border-bottom py-1">
-      <span class="small">${i + 1}. <strong>${escapeHtml(e.name)}</strong> — ${escapeHtml(e.itemName)}</span>
-      <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeLabelEntry_('${e.id}')">移除</button>
+      <span class="small">${i + 1}. <strong class="${isLong ? 'text-danger' : ''}">${escapeHtml(e.name)}</strong>${isLong ? ' <i class="bi bi-exclamation-triangle-fill text-warning" title="超過3個字，列印時可能跑版"></i>' : ''} — ${escapeHtml(e.itemName)}</span>
+      <span class="text-nowrap">
+        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2 me-1" onclick="editLabelName_('${e.id}')">修改</button>
+        <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removeLabelEntry_('${e.id}')">移除</button>
+      </span>
     </div>
-  `).join('');
+  `;
+  }).join('');
+}
+
+function editLabelName_(id) {
+  const entry = labelEntries.find(e => e.id === id);
+  if (!entry) return;
+  const newName = prompt('修改列印名稱（建議 3 個字以內，太長容易超出標籤欄寬）', entry.name);
+  if (newName === null) return; // 使用者按取消
+  entry.name = newName.trim();
+  renderLabelList_();
 }
 
 function removeLabelEntry_(id) {
