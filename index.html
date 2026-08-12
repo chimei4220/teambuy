@@ -625,17 +625,33 @@ function toast(title, body) {
   new bootstrap.Toast(document.getElementById('liveToast')).show();
 }
 
+// 小工具：等待指定毫秒數，用於重試間隔
+function sleep_(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
 async function apiGet(action, params = {}) {
   const url = new URL(API_URL);
   url.searchParams.set('action', action);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  url.searchParams.set('_ts', Date.now()); // 避免瀏覽器快取住舊的回應
-  const res = await fetch(url, { cache: 'no-store' });
-  return res.json();
+
+  const maxTries = 3;
+  let lastErr;
+  for (let attempt = 1; attempt <= maxTries; attempt++) {
+    try {
+      url.searchParams.set('_ts', Date.now()); // 避免瀏覽器快取住舊的回應
+      const res = await fetch(url, { cache: 'no-store' });
+      return await res.json();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxTries) await sleep_(500 * attempt); // 失敗就稍等一下再重試，間隔遞增
+    }
+  }
+  throw lastErr;
 }
 
 async function apiPost(payload) {
   // 用 text/plain 避免觸發瀏覽器的 CORS 預檢請求（Apps Script 不支援 OPTIONS）
+  // 注意：這裡刻意不自動重試——如果伺服器其實已經處理成功、只是回應沒送達，
+  // 自動重試送出訂單、新增商品這類「寫入」動作可能會造成重複紀錄，寧可讓使用者自己看到失敗訊息再手動重試。
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -680,17 +696,20 @@ function switchPage(page) {
 
 // ---------- 團購設定 / 商品（公開） ----------
 // ---------- 全站設定（付款資訊）----------
+function applyPaymentInfo_(paymentInfo) {
+  if (!paymentInfo) return;
+  document.getElementById('paymentInfoText').textContent = paymentInfo;
+  hasPaymentInfo = true;
+  const currentPage = document.querySelector('.page-section.active')?.dataset.page;
+  const adminPages = ['orders', 'products'];
+  document.getElementById('paymentInfoAlert').style.display =
+    (!adminPages.includes(currentPage)) ? 'block' : 'none';
+}
+
 async function loadConfig() {
   try {
     const res = await apiGet('getConfig');
-    if (res.ok && res.data.paymentInfo) {
-      document.getElementById('paymentInfoText').textContent = res.data.paymentInfo;
-      hasPaymentInfo = true;
-      const currentPage = document.querySelector('.page-section.active')?.dataset.page;
-      const adminPages = ['orders', 'products'];
-      document.getElementById('paymentInfoAlert').style.display =
-        (!adminPages.includes(currentPage)) ? 'block' : 'none';
-    }
+    if (res.ok) applyPaymentInfo_(res.data.paymentInfo);
   } catch (err) { console.error(err); }
 }
 
@@ -703,6 +722,7 @@ async function loadActiveRounds() {
       listEl.innerHTML = `<div class="col-12"><div class="alert alert-danger">載入失敗：${res.error}</div></div>`;
       return;
     }
+    applyPaymentInfo_(res.paymentInfo);
     activeRounds = res.data;
     if (activeRounds.length === 0) {
       listEl.innerHTML = `<div class="col-12 text-muted">目前沒有進行中的團購，請洽管理員。</div>`;
@@ -1596,7 +1616,6 @@ async function setRoundStatus(batch, status) {
 }
 
 // ---------- 初始化 ----------
-loadConfig();
 loadActiveRounds();
 if (token) enterAdminMode();
 </script>
