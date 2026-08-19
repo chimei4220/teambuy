@@ -1618,10 +1618,22 @@ function renderProducts() {
   tbody.innerHTML = list.map(p => `
     <tr>
       <td class="small">${escapeHtml(p['編號'])}</td>
-      <td>${escapeHtml(p['品名'])}</td>
-      <td class="small">${escapeHtml(p['規格'] || '')}</td>
-      <td class="text-end">${fmtMoney(p['單價'])}</td>
-      <td class="small text-truncate" style="max-width:160px;">${escapeHtml(p['圖片網址'] || '')}</td>
+      <td>
+        <input type="text" class="form-control form-control-sm" value="${escapeHtml(p['品名'])}"
+               onchange="updateProductField(this, '${p['編號']}', '品名', this.value)">
+      </td>
+      <td>
+        <input type="text" class="form-control form-control-sm" value="${escapeHtml(p['規格'] || '')}"
+               onchange="updateProductField(this, '${p['編號']}', '規格', this.value)">
+      </td>
+      <td>
+        <input type="number" class="form-control form-control-sm text-end" value="${Number(p['單價']) || 0}"
+               onchange="updateProductField(this, '${p['編號']}', '單價', this.value)">
+      </td>
+      <td>
+        <input type="text" class="form-control form-control-sm" value="${escapeHtml(p['圖片網址'] || '')}"
+               onchange="updateProductField(this, '${p['編號']}', '圖片網址', this.value)">
+      </td>
       <td>
         <select class="form-select form-select-sm" style="width:100px" onchange="toggleStatus('${p['編號']}', this.value)">
           <option value="上架" ${p['狀態']==='上架'?'selected':''}>上架</option>
@@ -1630,6 +1642,19 @@ function renderProducts() {
       </td>
     </tr>
   `).join('');
+}
+
+async function updateProductField(inputEl, code, field, value) {
+  const res = await apiPost({ action: 'updateProduct', token, code, field, value: field === '單價' ? (Number(value) || 0) : value });
+  if (res.ok) {
+    toast('更新成功', `${code} 的「${field}」已更新`);
+    // 同步更新記憶體裡的資料，避免下拉選單或其他區塊還顯示舊值
+    const p = productsData.find(x => x['編號'] === code);
+    if (p) p[field] = field === '單價' ? (Number(value) || 0) : value;
+  } else {
+    toast('更新失敗', res.error);
+    if (inputEl) inputEl.focus();
+  }
 }
 
 async function toggleStatus(code, value) {
